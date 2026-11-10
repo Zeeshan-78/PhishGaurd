@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ================================================================
-#   PhishGuard AI — Installer v1.0
+#   PhishGuard AI — Installer v2.1.0
 #   Supports : Linux (Debian/Ubuntu/Kali/Arch) | Termux (Android)
 #   Usage    : bash install.sh
 # ================================================================
@@ -31,7 +31,7 @@ cat << 'BANNER'
   ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
 BANNER
 echo -e "${RST}"
-echo -e "  ${DIM}PhishGuard AI — Installer v1.0${RST}"
+echo -e "  ${DIM}PhishGuard AI — Installer v2.1.0${RST}"
 echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}\n"
 
 # ── Detect Environment ───────────────────────────────────────────
@@ -132,8 +132,17 @@ PY_PKGS=("rich" "pyfiglet" "requests" "requests[socks]")
 for pkg in "${PY_PKGS[@]}"; do
     label="${pkg%%\[*}"
     info "Installing ${label}..."
-    $PYTHON -m pip install "$pkg" -q 2>/dev/null \
-        && ok "${label}" || warn "${label} failed — tool may still work"
+    # FIX: Kali/Debian mein PEP 668 hota hai — --break-system-packages chahiye
+    # Pehle normal, phir --break-system-packages, phir --user try karo
+    if $PYTHON -m pip install "$pkg" -q 2>/dev/null; then
+        ok "${label}"
+    elif $PYTHON -m pip install "$pkg" -q --break-system-packages 2>/dev/null; then
+        ok "${label} (system)"
+    elif $PYTHON -m pip install "$pkg" -q --user 2>/dev/null; then
+        ok "${label} (user)"
+    else
+        warn "${label} install failed — tool may still partially work"
+    fi
 done
 
 # ── Install Command ──────────────────────────────────────────────
@@ -161,16 +170,23 @@ ok "Installed to ${TARGET}"
 # ── Verify ───────────────────────────────────────────────────────
 step 6 "Verifying installation"
 
-command -v ai-detect &>/dev/null \
-    && ok "'ai-detect' command is globally available" \
-    || warn "'ai-detect' not in PATH yet — run: source ~/.bashrc"
+# FIX: PATH ko is session mein bhi refresh karo
+export PATH="$BIN_DIR:$PATH"
+hash -r 2>/dev/null || true
+
+if command -v ai-detect &>/dev/null; then
+    ok "'ai-detect' command globally available"
+else
+    warn "'ai-detect' not in PATH — running: export PATH=\"$BIN_DIR:\$PATH\""
+    export PATH="$BIN_DIR:$PATH"
+fi
 
 $PYTHON -c "import rich, pyfiglet, requests; print('  \033[92m✓\033[0m  Python packages OK')" \
     2>/dev/null || warn "Some packages may be missing"
 
 # ── Done ─────────────────────────────────────────────────────────
 echo -e "\n${BLD}${GRN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
-echo -e "  ${GRN}${BLD}✅  PhishGuard AI v1.0 installed!${RST}"
+echo -e "  ${GRN}${BLD}✅  PhishGuard AI v2.1.0 installed!${RST}"
 echo -e "${BLD}${GRN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}\n"
 echo -e "  ${CYN}Run:${RST}   ${BLD}ai-detect${RST}"
 echo -e "  ${DIM}First run mein Gemini API key set karni hogi.${RST}"
@@ -181,6 +197,17 @@ $IS_TERMUX && echo -e "  ${YLW}Termux:${RST} agar kaam na kare to: ${DIM}source 
 printf "  Launch now? [Y/n]: "
 read -r LAUNCH
 case "${LAUNCH:-Y}" in
-    [Yy]*) echo; exec ai-detect ;;
-    *)     echo -e "\n  ${DIM}Type 'ai-detect' anytime to start.${RST}\n" ;;
+    [Yy]*)
+        echo
+        # FIX: 'exec ai-detect' fail hota tha kyunki PATH refresh nahi tha
+        # Full path use karo ya python3 se directly chalao
+        if command -v ai-detect &>/dev/null; then
+            exec ai-detect
+        elif [ -f "$TARGET" ]; then
+            exec "$TARGET"
+        else
+            exec $PYTHON "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ai_detect.py"
+        fi
+        ;;
+    *)   echo -e "\n  ${DIM}Type 'ai-detect' anytime to start.${RST}\n" ;;
 esac
