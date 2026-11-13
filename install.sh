@@ -3,7 +3,6 @@
 #   PhishGuard AI — Installer v2.1.0
 #   Supports : Linux (Debian/Ubuntu/Kali/Arch) | Termux (Android)
 #   Usage    : bash install.sh
-
 # ================================================================
 
 set -e
