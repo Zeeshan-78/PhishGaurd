@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 # ================================================================
 #   PhishGuard AI — CLI Phishing & Vulnerability Detection Tool
-#   Version : 1.1
-#   Author  : Zeeshan Ali
+#   Version : 3.0.0
 #   Command : ai-detect
 #   Compat  : Linux | Termux | Kali | Python 3.7+
 #   Models  : Gemini | OpenAI | Claude | Groq | Ollama | Custom
@@ -14,10 +13,9 @@ import sys, os, subprocess
 if sys.version_info < (3, 7):
     sys.exit('[!] Python 3.7+ required. Got: ' + sys.version)
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 1 — BOOTSTRAP
-#  ye bootstrap hai bhai jan main thing hai ye dehan sy check krna 
-
+# ════════════════════════════════════════════════════════════════
 _REQUIRED = {'rich': 'rich', 'pyfiglet': 'pyfiglet', 'requests': 'requests'}
 
 def _can_import(name):
@@ -50,10 +48,9 @@ def _bootstrap():
 
 _bootstrap()
 
-
-#  SECTION 2 — IMPORTS 
-#  sari libarary file import hai bachoo 
-
+# ════════════════════════════════════════════════════════════════
+#  SECTION 2 — IMPORTS
+# ════════════════════════════════════════════════════════════════
 import re, json, time, random, socket, signal, argparse, getpass, ssl
 from pathlib import Path
 from datetime import datetime
@@ -72,10 +69,10 @@ from rich         import box
 
 requests.packages.urllib3.disable_warnings()  # SSL warning suppress
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 3 — CONSTANTS & PROVIDER CONFIGS
-
-VERSION      = '1.1'
+# ════════════════════════════════════════════════════════════════
+VERSION      = '3.0.0'
 CONFIG_DIR   = Path.home() / '.ai-detect'
 CONFIG_FILE  = CONFIG_DIR / 'config.json'
 HISTORY_FILE = CONFIG_DIR / 'history.json'
@@ -155,19 +152,17 @@ SCAN_TYPES = {
 
 console = Console()
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 4 — SIGNAL HANDLER
-
+# ════════════════════════════════════════════════════════════════
 def _sigint(sig, frame):
     console.print('\n\n  [dim]Interrupted. Bye! 🛡️[/dim]\n')
     sys.exit(0)
 signal.signal(signal.SIGINT, _sigint)
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 5 — BANNER SYSTEM
-# ye sirf banner hai aur kuch 
-# just a asci code jo kisi bhi ai sy bna skty hai
-
+# ════════════════════════════════════════════════════════════════
 _FALLBACK = r"""
   ██████╗ ██╗  ██╗██╗███████╗██╗  ██╗ ██████╗ ██╗   ██╗ █████╗ ██████╗ ██████╗
   ██╔══██╗██║  ██║██║██╔════╝██║  ██║██╔════╝ ██║   ██║██╔══██╗██╔══██╗██╔══██╗
@@ -208,9 +203,9 @@ def show_banner(tor_ok=False, provider='', model='', scans=0):
     console.print(Align.center(info))
     console.print(Rule(style='dim'))
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 6 — CONFIG MANAGER
-
+# ════════════════════════════════════════════════════════════════
 def ensure_dir():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     try: CONFIG_DIR.chmod(0o700)
@@ -234,9 +229,9 @@ def get_provider_info(cfg):
     name = next((v['name'] for v in PROVIDERS.values() if v['id'] == pid), pid)
     return pid, name, cfg.get('model', ''), cfg.get('api_key', ''), cfg.get('base_url', '')
 
-
+# ════════════════════════════════════════════════════════════════
 #  SECTION 7 — TOR MANAGER
-
+# ════════════════════════════════════════════════════════════════
 def _is_termux():
     return ('com.termux' in os.environ.get('PREFIX','') or
             os.path.isdir('/data/data/com.termux') or
@@ -247,13 +242,29 @@ def _run(cmd, t=10):
     except: return False
 
 def check_tor():
+    """Check if Tor SOCKS5 port is open."""
     try:
         s = socket.create_connection(('127.0.0.1', 9050), timeout=3)
         s.close(); return True
     except: return False
 
+def check_tor_works():
+    """
+    FIX: Port open != Tor routing traffic.
+    Actually test HTTP through Tor — Errno 111 isi wajah se aata tha.
+    """
+    if not check_tor():
+        return False
+    try:
+        r = requests.get('https://api.ipify.org?format=json',
+                         proxies=TOR_PROXY, timeout=15, verify=False)
+        return r.status_code == 200
+    except Exception:
+        return False
+
 def start_tor(cfg):
-    if check_tor(): return True
+    # First test if Tor already works fully
+    if check_tor_works(): return True
     if cfg.get('skip_tor'): return False
     with console.status('[yellow]🧅 Starting Tor...', spinner='dots'):
         if _is_termux():
@@ -265,9 +276,10 @@ def start_tor(cfg):
                 _run(['systemctl','start','tor']) or _run(['service','tor','start'])
             else:
                 _run(['sudo','-n','systemctl','start','tor']) or _run(['sudo','-n','service','tor','start'])
-        for _ in range(20):
+        # Wait and test with real HTTP (not just port)
+        for _ in range(25):
             time.sleep(1)
-            if check_tor(): return True
+            if check_tor_works(): return True
     return False
 
 def get_ip(use_tor=False):
@@ -290,14 +302,40 @@ def rotate_tor():
         return ok
     except: return False
 
-# ye hoi na bat issue reslove 
+# ════════════════════════════════════════════════════════════════
 #  SECTION 8 — MULTI-LLM CALLER
-#  ye code sary bry bry ai detect kr skta hai 
+# ════════════════════════════════════════════════════════════════
 _DEFAULT_URLS = {
     'openai':    'https://api.openai.com/v1',
     'groq':      'https://api.groq.com/openai/v1',
     'ollama':    'http://localhost:11434/v1',
 }
+
+# FIX: Per-provider API key format validation — prefix only, no length check
+# (length check was rejecting valid short test keys — removed)
+_KEY_FORMATS = {
+    'gemini':    ('AIza',    'Gemini key "AIza..." se start hoti hai\n  → https://aistudio.google.com/app/apikey'),
+    'openai':    ('sk-',     'OpenAI key "sk-..." se start hoti hai\n  → https://platform.openai.com/api-keys'),
+    'anthropic': ('sk-ant',  'Anthropic key "sk-ant-..." se start hoti hai\n  → https://console.anthropic.com/'),
+    'groq':      ('gsk_',    'Groq key "gsk_..." se start hoti hai\n  → https://console.groq.com/keys'),
+}
+
+def validate_key(provider_id, key):
+    """
+    Returns (is_valid, error_message).
+    Checks key prefix per provider — prevents 404/401 before API call.
+    """
+    if not key:
+        return False, 'API key khali hai! Zaroor enter karo.'
+    fmt = _KEY_FORMATS.get(provider_id)
+    if fmt:
+        prefix, hint = fmt
+        if not key.startswith(prefix):
+            return False, (f'❌ API key format GALAT hai!\n\n'
+                           f'  Aapki key shuru: [{key[:8]}...]\n'
+                           f'  {hint}\n\n'
+                           f'  Sahi key leke dubara paste karo.')
+    return True, ''
 
 def _parse_json(raw):
     cleaned = raw.replace('```json','').replace('```','').strip()
@@ -373,40 +411,80 @@ def _call_anthropic(api_key, model, prompt, proxies):
     return _parse_json(raw) or {'error': 'Could not parse JSON.', '_raw': raw[:300]}
 
 def call_llm(cfg, prompt, use_tor=False):
-    """Universal LLM caller — routes to correct provider automatically."""
-    pid     = cfg.get('provider', 'gemini')
-    api_key = cfg.get('api_key', '')
-    model   = cfg.get('model', '')
-    base_url= cfg.get('base_url', _DEFAULT_URLS.get(pid, ''))
-    proxies = TOR_PROXY if use_tor else None
+    """Universal LLM caller — validates key then routes to correct provider."""
+    pid      = cfg.get('provider', 'gemini')
+    api_key  = cfg.get('api_key', '')
+    model    = cfg.get('model', '')
+    base_url = cfg.get('base_url', _DEFAULT_URLS.get(pid, ''))
+    proxies  = TOR_PROXY if use_tor else None
+
+    # FIX: Validate key format BEFORE making API call
+    if pid not in ('ollama', 'custom'):
+        is_valid, err_msg = validate_key(pid, api_key)
+        if not is_valid:
+            return {'error': err_msg + '\n\n  Settings [9] → [2] Change API Key'}
+
+    def _do_call(px):
+        if   pid == 'gemini':    return _call_gemini(api_key, model, prompt, px)
+        elif pid == 'anthropic': return _call_anthropic(api_key, model, prompt, px)
+        else:                    return _call_openai_compat(api_key, model, base_url, prompt, px)
 
     try:
-        if   pid == 'gemini':    return _call_gemini(api_key, model, prompt, proxies)
-        elif pid == 'anthropic': return _call_anthropic(api_key, model, prompt, proxies)
-        else:                    return _call_openai_compat(api_key, model, base_url, prompt, proxies)
+        return _do_call(proxies)
+
     except requests.ConnectionError as e:
-        if use_tor:
-            # Retry direct
-            proxies = None
+        err_str = str(e)
+        # FIX: Errno 111 = Tor blocking → auto retry direct
+        if use_tor and ('111' in err_str or 'refused' in err_str.lower() or
+                        'Max retries' in err_str):
             try:
-                if pid == 'gemini':    return _call_gemini(api_key, model, prompt, proxies)
-                elif pid == 'anthropic':return _call_anthropic(api_key, model, prompt, proxies)
-                else:                  return _call_openai_compat(api_key, model, base_url, prompt, proxies)
+                return _do_call(None)   # direct, no Tor
+            except requests.ConnectionError as e2:
+                return {'error': (f'Internet connection nahi hai.\n'
+                                  f'  Network check karo aur retry karo.\n'
+                                  f'  Detail: {str(e2)[:80]}')}
             except Exception as e2:
-                return {'error': f'Connection failed (Tor+Direct): {e2}'}
-        return {'error': f'Connection error: {e}'}
+                return {'error': f'Direct connection bhi fail: {e2}'}
+        if use_tor:
+            # Other Tor error → retry direct
+            try:
+                return _do_call(None)
+            except Exception as e2:
+                return {'error': f'Connection failed: {e2}'}
+        return {'error': (f'Internet connection error.\n'
+                          f'  Network check karo ya Tor disable karo [9] Settings.\n'
+                          f'  Detail: {str(e)[:100]}')}
+
     except requests.Timeout:
-        return {'error': 'Timeout (35s). Model is slow — retry.'}
+        return {'error': 'Timeout (35s) — AI model slow hai. Retry karo ya doosra model try karo.'}
+
     except requests.HTTPError as e:
-        code = e.response.status_code if e.response else '?'
-        msgs = {400: 'Bad request (check model name)',
-                401: 'Invalid API key (401)',
-                403: 'Forbidden — check API key permissions',
-                429: 'Rate limit reached — wait 60s',
-                500: 'Provider server error — retry later'}
-        return {'error': msgs.get(code, f'HTTP {code}: {e}')}
+        code = e.response.status_code if e.response is not None else 0
+        body = ''
+        try: body = e.response.text[:200]
+        except: pass
+        if code == 404:
+            return {'error': (f'404 Error — Model nahi mila.\n\n'
+                              f'  Possible causes:\n'
+                              f'  1. API key galat hai — check karo: {api_key[:8]}...\n'
+                              f'     Gemini key "AIza" se start hoti hai\n'
+                              f'  2. Model name galat hai: {model}\n'
+                              f'  3. Ye model aapke region mein available nahi\n\n'
+                              f'  Fix: Settings [9] → [1] aur sahi key/model enter karo')}
+        elif code == 401:
+            return {'error': (f'401 — API key invalid ya expired.\n'
+                              f'  Naya key banao: aistudio.google.com/app/apikey\n'
+                              f'  Phir Settings [9] → [2] mein update karo.')}
+        elif code == 403:
+            return {'error': '403 — API key ka permission nahi. Key ka access check karo.'}
+        elif code == 429:
+            return {'error': '429 — Rate limit. 60 seconds wait karo phir retry karo.\n  Ya free Groq use karo [Settings → Change Provider].'}
+        elif code == 500:
+            return {'error': '500 — Provider server error. 1-2 minute baad retry karo.'}
+        return {'error': f'HTTP {code} error.\n  Detail: {body}'}
+
     except Exception as e:
-        return {'error': f'Unexpected error: {e}'}
+        return {'error': f'Unexpected error: {type(e).__name__}: {e}'}
 
 # ════════════════════════════════════════════════════════════════
 #  SECTION 9 — PROMPT BUILDER
@@ -1059,8 +1137,16 @@ def first_run_setup(cfg):
                 api_key = getpass.getpass('  → API Key (hidden input): ').strip()
             except Exception:
                 api_key = _ask('→ API Key')
-            if api_key: break
-            console.print('  [red]✗ API key cannot be empty.[/red]')
+            if not api_key:
+                console.print('  [red]✗ Key khali hai! Zaroor enter karo.[/red]')
+                continue
+            # FIX: Validate format before saving — prevents 404/401 on first scan
+            is_valid, err_msg = validate_key(provider['id'], api_key)
+            if not is_valid:
+                console.print(f'\n  [bold red]{err_msg}[/bold red]\n')
+                if not Confirm.ask('  Phir bhi is key ko save karein?'):
+                    continue
+            break
 
     # ── Step 5: Test ─────────────────────────────────────────
     test_cfg = {
@@ -1131,6 +1217,11 @@ def show_settings(cfg, tor_ok):
             try:    new_key = getpass.getpass('  → New API Key (hidden): ').strip()
             except: new_key = _ask('→ New API Key')
             if new_key:
+                is_valid, err_msg = validate_key(pid, new_key)
+                if not is_valid:
+                    console.print(f'\n  [bold red]{err_msg}[/bold red]\n')
+                    if not Confirm.ask('  Phir bhi save karein?'):
+                        continue
                 cfg['api_key'] = new_key; api_key = new_key
                 save_cfg(cfg); console.print('  [green]✓ Key updated.[/green]')
         elif c == '3':
@@ -1175,17 +1266,24 @@ def run_scan(scan_key, cfg, tor_ok, session_stats):
 
     # Call LLM
     console.print()
+    prompt = build_prompt(stype, content)
+
+    via = 'Tor' if tor_ok else 'Direct'
     with console.status(
-        f'[bold cyan]  🤖 {pname} / {model} analyzing '
-        f'via {"Tor" if tor_ok else "Direct"}...[/bold cyan]', spinner='dots2'):
-        prompt = build_prompt(stype, content)
+        f'[bold cyan]  🤖 {pname} / {model} → {via}...[/bold cyan]', spinner='dots2'):
         result = call_llm(cfg, prompt, use_tor=tor_ok)
 
-        # If Tor failed, try direct
-        if 'error' in result and 'connect' in result.get('error','').lower() and tor_ok:
-            console.print('  [yellow]⚠ Tor failed — retrying direct...[/yellow]')
-            result  = call_llm(cfg, prompt, use_tor=False)
-            tor_ok  = False
+    # FIX: Auto-disable Tor if it's causing the error
+    err = result.get('error', '')
+    if 'error' in result and tor_ok:
+        is_tor_error = any(x in err.lower() for x in
+                           ['111', 'refused', 'max retries', 'tor', 'socks'])
+        if is_tor_error:
+            console.print('  [yellow]⚠ Tor connection blocked — retrying direct...[/yellow]')
+            result = call_llm(cfg, prompt, use_tor=False)
+            tor_ok = False   # disable for rest of session
+            if 'error' not in result:
+                console.print('  [green]✓ Direct connection successful[/green]')
 
     # Display
     display_result(result, stype, pname, model)
