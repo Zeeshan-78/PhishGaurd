@@ -1,471 +1,131 @@
 <div align="center">
 
-```
-  ██████╗ ██╗  ██╗██╗███████╗██╗  ██╗ ██████╗ ██╗   ██╗ █████╗ ██████╗ ██████╗
-  ██╔══██╗██║  ██║██║██╔════╝██║  ██║██╔════╝ ██║   ██║██╔══██╗██╔══██╗██╔══██╗
-  ██████╔╝███████║██║███████╗███████║██║  ███╗██║   ██║███████║██████╔╝██║  ██║
-  ██╔═══╝ ██╔══██║██║╚════██║██╔══██║██║   ██║██║   ██║██╔══██║██╔══██╗██║  ██║
-  ██║     ██║  ██║██║███████║██║  ██║╚██████╔╝╚██████╔╝██║  ██║██║  ██║██████╔╝
-  ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
-```
+# 🔰 PhishGuard AI — `ai-detect`
 
-# PhishGuard AI — CLI Phishing Detection Tool
+**Phishing, malware and website-vulnerability scanner for the terminal.**
+Paste an API key — the provider and model are detected automatically.
 
-**AI-powered phishing detection from your terminal — URLs, Emails, APKs, Code, Files & Messages**
-
-[![Python](https://img.shields.io/badge/Python-3.7%2B-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Termux-green?style=flat-square&logo=linux&logoColor=white)](https://github.com)
-[![AI Model](https://img.shields.io/badge/AI-Gemini%201.5%20Flash-blue?style=flat-square&logo=google&logoColor=white)](https://aistudio.google.com)
-[![Tor](https://img.shields.io/badge/Tor-Supported-purple?style=flat-square)](https://www.torproject.org)
-[![Free API](https://img.shields.io/badge/API-Free%201500%2Fday-brightgreen?style=flat-square)](https://aistudio.google.com/app/apikey)
-[![Version](https://img.shields.io/badge/Version-2.1.0-orange?style=flat-square)](https://github.com)
+![Python](https://img.shields.io/badge/python-3.7%2B-blue)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Kali%20%7C%20Termux-green)
+![License](https://img.shields.io/badge/license-MIT-yellow)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Why it's different
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Demo](#-demo)
-- [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Scan Types](#-scan-types)
-- [Configuration](#-configuration)
-- [APK Scanning Guide](#-apk-scanning-guide)
-- [Tor Integration](#-tor-integration)
-- [Threat Scoring](#-threat-scoring)
-- [File Structure](#-file-structure)
-- [Contributing](#-contributing)
-- [License](#-license)
+- **One input: your API key.** Gemini, OpenAI, Claude, Groq, OpenRouter, xAI, DeepSeek, Mistral, Together, Cerebras, Ollama or any OpenAI-compatible endpoint. The tool identifies the provider, lists the models your key can use, **verifies each candidate with a real call**, and picks the best working one. Models get retired (e.g. `gemini-1.5-flash`) — if the saved model ever returns 404, it re-detects and heals itself.
+- **Works without AI too.** Every scan first runs offline checks (listed below). The AI adds judgement on top; if the AI is unreachable you still get a full local report.
+- **Real website scanning**, not just a URL string check: one passive `GET`, TLS certificate check, security headers, cookie flags, forms, hidden iframes, obfuscated scripts, redirects.
+- **Fast.** Menu opens in ~0.2 s. Tor is optional and starts in the background — it never blocks the UI.
+- **Safe by design.** Your key is sent in a header (never in a URL), redacted from every error message, stored with `chmod 600`. Scanned content is treated as untrusted data (prompt-injection hardened).
 
----
-
-## 🌟 Overview
-
-**PhishGuard AI** is a professional command-line phishing detection tool powered by **Google Gemini 1.5 Flash** (free tier). It analyzes URLs, emails, source code, Android APKs, files, and messages for phishing, malware, social engineering, and credential harvesting — all from your terminal.
-
-Fully compatible with **Linux** (Debian/Ubuntu/Kali/Arch) and **Termux** (Android), with optional **Tor** routing for anonymity.
-
-> **API Cost:** Completely free — Gemini free tier gives **1,500 scans/day**, no credit card required.
-
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 🎨 **6 Random Banners** | Different ASCII art on every run (slant, doom, banner3, epic, digital, shadow) |
-| 🧅 **Tor Integration** | Auto-starts Tor daemon, routes scans through onion network |
-| 🔄 **Tor IP Rotation** | Rotate exit node identity from inside the tool |
-| 🔑 **Secure Key Storage** | API key hidden during input, stored with `chmod 600` |
-| 📦 **Auto Dependencies** | Missing Python packages auto-installed on first run |
-| 🌐 **URL Scanner** | Typosquatting, homograph attacks, suspicious TLDs, fake domains |
-| 📧 **Email Scanner** | Phishing emails, spoofed senders, urgency tactics, impersonation |
-| 💻 **Code Scanner** | Malicious JS/PHP/Python, eval() obfuscation, data exfiltration |
-| 📱 **APK Scanner** | Dangerous permissions, SMS stealers, overlay attacks, dropper malware |
-| 📂 **File Scanner** | Malicious scripts, embedded URLs, encoded payloads, macros |
-| 💬 **Message Scanner** | WhatsApp/SMS scams, fake banks, OTP theft, prize fraud |
-| 📊 **Scan History** | Persistent JSON history, export, stats across sessions |
-| ⚙️ **Settings Menu** | API key change, Tor toggle, history export, full reset |
-| 🛡️ **Threat Indicators** | 7 specific threat vectors checked per scan |
-| 📋 **Detailed Findings** | Severity-graded findings with descriptions |
-| 💡 **Recommendations** | Actionable security advice per scan |
-| 🖥️ **Linux + Termux** | Single codebase, works on both platforms |
-
----
-
-## 🎬 Demo
-
-```
-╭──────────────────────────────────────────────────────────────╮
-│                                                              │
-│    ____  _     _     _      ____                     _      │
-│   |  _ \| |__ (_)___| |__  / ___|_   _  __ _ _ __ __| |    │
-│   | |_) | '_ \| / __| '_ \| |  _| | | |/ _` | '__/ _` |   │
-│   |  __/| | | | \__ \ | | | |_| | |_| | (_| | | | (_| |   │
-│   |_|   |_| |_|_|___/_| |_|\____|\__,_|\__,_|_|  \__,_|   │
-│                                                              │
-│         [ AI-Powered Phishing Detection ]                    │
-│                                                              │
-│   v2.1.0  │  🤖 Gemini 1.5 Flash  │  ● TOR ON  │  10:48   │
-╰──────────────────────────────────────────────────────────────╯
-
-  SCAN TOOLS
-  [1]  🌐  URL / Website Scanner
-  [2]  📧  Email Scanner
-  [3]  💻  Code / Script Scanner
-  [4]  📱  APK / App Scanner
-  [5]  📂  File Scanner
-  [6]  💬  Message / SMS Scanner
-
-  TOOLS
-  [7]  📊  Scan History
-  [8]  🧅  Rotate Tor Identity
-  [9]  ⚙️   Settings
-  [0]  🚪  Exit
-
-  → Enter choice:
-```
-
-**Scan Result Example:**
-```
-━━━━━━━━━━━━ SCAN RESULTS  #20261109104823 ━━━━━━━━━━━━
-
-╭─────────────────────── 💀 CRITICAL RISK ───────────────────────╮
-│                                                                 │
-│  Threat Score  :  ████████████████████████░░░░  96/100         │
-│  Confidence    :  ███████████████████████████░  94/100         │
-│                                                                 │
-│  Risk Level    :  💀 CRITICAL                                   │
-│  Phishing      :  ⚠️  YES — PHISHING DETECTED                  │
-│  Scan Type     :  URL                                           │
-│  Timestamp     :  2026-11-09 10:48:23                          │
-╰─────────────────────────────────────────────────────────────────╯
-
-╭──────────────── 🎯 Threat Indicators ─────────────────╮
-│  🔗 URL Manipulation       ⚠️  FOUND                  │
-│  ⏰ Urgency Tactics        ✅  CLEAN                  │
-│  🎭 Impersonation          ⚠️  FOUND                  │
-│  🔑 Credential Harvesting  ⚠️  FOUND                  │
-│  💀 Malicious Code         ✅  CLEAN                  │
-╰───────────────────────────────────────────────────────╯
-```
-
----
-
-## 📋 Requirements
-
-| Requirement | Details |
-|-------------|---------|
-| **OS** | Linux (Debian/Ubuntu/Kali/Arch) or Android (Termux) |
-| **Python** | 3.7 or higher |
-| **Gemini API** | Free key from [aistudio.google.com](https://aistudio.google.com/app/apikey) |
-| **Tor** | Optional — installed automatically by installer |
-| **Internet** | Required for Gemini API calls |
-
-**Python packages** (auto-installed):
-```
-rich >= 13.0
-pyfiglet >= 0.8
-requests >= 2.28
-requests[socks]  # for Tor routing (optional)
-```
-
----
-
-## 🚀 Installation
-
-### Linux (Debian / Ubuntu / Kali)
+## Install
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/YOUR-USERNAME/phishguard-ai.git
-cd phishguard-ai
-
-# 2. Run the installer
-bash install.sh
-
-# 3. Done! Launch with:
+git clone https://github.com/Zeeshan-78/PhishGaurd.git
+cd PhishGaurd
+bash install.sh            # add --with-tor for optional Tor
 ai-detect
 ```
 
-### Termux (Android)
+Works on Debian/Ubuntu/Kali/Arch/Fedora and Termux. Missing Python packages (`rich`, `pyfiglet`, `requests`) are installed automatically, including on PEP 668 systems (Kali/Debian 12+).
+Uninstall: `bash install.sh --uninstall`
+
+## First run
+
+Run `ai-detect`, paste your key (input is hidden). Example:
+
+```
+✅ Detected!
+  Provider : Google Gemini
+  Model    : gemini-2.5-flash
+```
+
+| Key looks like | Detected as |
+|---|---|
+| `AQ.…` or `AIza…` | Google Gemini (**`AQ.` is Google's newer, valid key format**) |
+| `sk-ant-…` | Anthropic Claude |
+| `sk-proj-…` | OpenAI |
+| `sk-…` (other) | OpenAI or DeepSeek (resolved automatically) |
+| `gsk_…` | Groq |
+| `sk-or-…` / `xai-…` / `csk-…` | OpenRouter / xAI / Cerebras |
+| `o` | Ollama (local, no key) |
+| `c` | Custom OpenAI-compatible endpoint |
+| `l` | Local checks only (no AI) |
+
+Free keys: [Gemini](https://aistudio.google.com/app/apikey) · [Groq](https://console.groq.com/keys)
+
+## Usage
 
 ```bash
-# 1. Update packages
-pkg update && pkg upgrade -y
-
-# 2. Install git
-pkg install git -y
-
-# 3. Clone
-git clone https://github.com/YOUR-USERNAME/phishguard-ai.git
-cd phishguard-ai
-
-# 4. Install
-bash install.sh
-
-# 5. Launch
-ai-detect
+ai-detect                                  # interactive menu
+ai-detect url example.com                  # website scan
+ai-detect message "You won! Send your OTP"
+ai-detect email suspicious.eml
+ai-detect code payload.js
+ai-detect apk AndroidManifest.xml
+ai-detect file macro.ps1
+cat mail.txt | ai-detect email -           # from stdin
+ai-detect url example.com --json           # machine-readable
+ai-detect url example.com --no-ai          # local checks only
+ai-detect url example.com --tor            # route through Tor
+ai-detect setup | models | history | reset
 ```
 
-### Manual Installation (without installer)
+Exit code: `0` low risk · `1` medium · `2` high/critical — handy in scripts and CI.
 
-```bash
-# Install Python packages
-pip install rich pyfiglet requests "requests[socks]"
+In the interactive menu you can paste text **or type a file path** as the first line. Finish a paste with two empty lines.
 
-# Run directly
-python3 ai_detect.py
+## What it checks (offline, no AI needed)
 
-# Or make it global
-chmod +x ai_detect.py
-sudo cp ai_detect.py /usr/local/bin/ai-detect
-```
+| Scanner | Checks |
+|---|---|
+| **URL / website** | typosquatting & look-alike characters (`paypa1`), brand-in-subdomain, punycode, `@` tricks, suspicious TLDs, shorteners, raw-IP hosts · TLS validity/expiry/protocol · HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CORS · cookie `Secure`/`HttpOnly`/`SameSite` · server/`X-Powered-By` disclosure · login forms posting to another domain or over HTTP · hidden iframes, meta-refresh, `eval(atob())`, mixed content · redirect chains · brand-in-title with a password form |
+| **Email / message** | display-name spoofing, Reply-To mismatch, OTP/PIN/CVV requests, urgency and prize lures, investment-fraud wording, APK-install requests, verify-account lures, embedded-URL analysis |
+| **Code / file** | obfuscated `eval`, PowerShell `-enc`, pipe-to-shell, reverse shells, macro auto-exec, keyloggers, cookie access, miners, hardcoded secrets, large base64 blobs |
+| **APK** | SMS read+send (OTP stealers), accessibility + overlay attacks, device-admin, install-packages, boot persistence, spyware combos, `debuggable`, cleartext traffic, hardcoded IPs |
 
----
+Findings carry a severity; the score is the maximum of the AI score and the local score, and any phishing/malware-type HIGH/CRITICAL finding guarantees at least a HIGH level.
 
-## 🎯 Usage
+> **Large APKs:** extract first (`apktool d app.apk`) and scan `AndroidManifest.xml` — the manifest contains what matters (permissions, components).
 
-```bash
-# Interactive mode (recommended)
-ai-detect
+## Tor (optional)
 
-# Skip Tor, connect directly
-ai-detect --no-tor
+`ai-detect --tor` or menu → Tor. It starts in the background (`systemctl`/`service`, or a user-mode `tor` if you have no root); scans use it automatically once it is ready, and fall back to a direct connection if it fails. With Tor on, DNS/TLS probes are skipped so nothing leaks around it. Identity rotation needs `ControlPort 9051` in `torrc`.
 
-# Show version
-ai-detect --version
-
-# Show help
-ai-detect --help
-```
-
-**First Launch:**
-On first run, the tool will ask for your Gemini API key (input is hidden). Get a free key at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
-
----
-
-## 🔍 Scan Types
-
-### 🌐 URL / Website Scanner
-Detects: Typosquatting (`paypa1.com`), suspicious TLDs (`.tk .xyz .ml`), IP-based URLs, homograph attacks, URL shorteners hiding malicious destinations, mismatched brand/domain tricks.
-
-### 📧 Email Scanner
-Detects: Spoofed sender addresses, mismatched display name vs email, generic greetings ("Dear Customer"), urgency/fear language, credential/OTP requests, impersonation of banks, PayPal, Google, Microsoft.
-
-### 💻 Code Scanner
-Detects: `eval()` with base64/encoded strings, hidden iframes, form action to external domain, `fetch()`/XHR exfiltrating data, keyloggers (`addEventListener keydown`), `String.fromCharCode` obfuscation, cookie stealing.
-
-### 📱 APK / App Scanner
-Detects: `READ_SMS + SEND_SMS` (OTP stealer), `REQUEST_INSTALL_PACKAGES` (dropper), `SYSTEM_ALERT_WINDOW + BIND_ACCESSIBILITY_SERVICE` (overlay attack), `DEVICE_ADMIN` (ransomware), unofficial distribution (WhatsApp/Telegram link).
-
-### 📂 File Scanner
-Detects: Embedded phishing URLs, credential harvesting forms, encoded payloads, `Auto_Open`/`Document_Open` macros, PowerShell encoded commands (`-EncodedCommand`), C2 server addresses.
-
-### 💬 Message / SMS Scanner
-Detects: Prize/lottery scams, bank/government impersonation, OTP/PIN requests, URL shorteners, urgency threats ("account blocked", "FIR"), advance fee fraud, fake app installation links.
-
----
-
-## ⚙️ Configuration
-
-Config is stored in `~/.ai-detect/config.json`:
-
-```json
-{
-  "gemini_api_key": "AIzaSy...",
-  "first_run_done": true,
-  "setup_date": "2026-11-09T10:48:00",
-  "skip_tor": false
-}
-```
-
-Scan history in `~/.ai-detect/history.json` (up to 500 entries).
-
-**Change API key:**
-```bash
-ai-detect  # → [9] Settings → [1] Change API Key
-```
-
-**Environment variable (alternative):**
-```bash
-export GEMINI_API_KEY="AIzaSy..."
-ai-detect
-```
-
----
-
-## 📱 APK Scanning Guide
-
-Since APK files can be very large (100MB+), extract content first:
-
-```bash
-# Install apktool
-sudo apt install apktool    # Linux
-pkg install apktool          # Termux
-
-# Extract APK
-apktool d suspicious-app.apk -o extracted/
-
-# Key files to paste into scanner:
-# 1. extracted/AndroidManifest.xml  ← most important
-# 2. extracted/res/values/strings.xml
-# 3. extracted/smali/com/app/MainActivity.smali
-```
-
-Then paste the content into the **APK Scanner** in PhishGuard AI.
-
----
-
-## 🧅 Tor Integration
-
-PhishGuard AI automatically starts the Tor daemon and routes all Gemini API calls through the Tor network.
+## Files
 
 ```
-Your Terminal → Tor Network → Gemini API
+ai_detect.py   the tool (single file)        install.sh   installer / uninstaller
+~/.ai-detect/config.json   provider, model, key (chmod 600)
+~/.ai-detect/history.json  last 500 scans
 ```
 
-**Tor setup:**
-```bash
-# Tor is installed by install.sh automatically
+Advanced: `AI_DETECT_BASE_URLS='{"openai":"https://my-proxy/v1"}'` overrides a provider's base URL (gateways/proxies).
 
-# For IP rotation from inside the tool:
-# → [8] Rotate Tor Identity
+## Troubleshooting
 
-# For control port (enable rotation):
-# Add to /etc/tor/torrc:
-ControlPort 9051
-CookieAuthentication 0
-```
+| Problem | Fix |
+|---|---|
+| `Key reject hui` | Re-copy the full key; create a new one. |
+| Gemini `AQ.` key rejected with `ACCESS_TOKEN_TYPE_UNSUPPORTED` | Some accounts can't use `AQ.` keys on the REST API yet — regenerate the key in AI Studio or create an `AIza…` key in Google Cloud Console. |
+| `429` / quota | Free-tier limit; wait a minute or switch provider (`ai-detect setup`). |
+| Model 404 | Handled automatically (re-detect). Manual: Settings → *Model re-detect*. |
+| Termux `command not found` | `export PATH="$PREFIX/bin:$PATH"` |
 
-**Disable Tor:**
-```bash
-ai-detect --no-tor        # one-time
-# or inside tool → [9] Settings → [2] Toggle Tor
-```
+## Responsible use & privacy
 
----
+- Scan only sites you own or are authorised to test. The scanner sends one ordinary `GET` request and nothing intrusive.
+- Content you scan is sent to the AI provider you configured (not to us). Don't scan secrets you can't share; use `--no-ai` or Ollama for fully local analysis.
+- Results are heuristics + AI judgement: treat them as strong signals, not proof.
 
-## 📊 Threat Scoring
+## Development & testing
 
-| Score | Level | Meaning |
-|-------|-------|---------|
-| 0–14 | ✅ **SAFE** | No significant threat detected |
-| 15–34 | 🔵 **LOW** | Minor concerns, likely safe |
-| 35–59 | ⚠️ **MEDIUM** | Suspicious — proceed with caution |
-| 60–79 | 🔴 **HIGH** | Likely phishing — do not interact |
-| 80–100 | 💀 **CRITICAL** | Confirmed phishing/malware |
+The test-suite (not shipped) drives the real binary against local mock servers that emulate the Gemini, OpenAI, DeepSeek, Anthropic and Groq APIs (including retired models, parameter rejection, rate limits and bad keys) and a deliberately vulnerable website, plus a pseudo-terminal run of every menu option. Live provider endpoints depend on your own key and network.
 
----
+## License
 
-## 📁 File Structure
-
-```
-phishguard-ai/
-├── ai_detect.py      ← Main tool (all logic in one file)
-├── install.sh        ← Installer (Linux + Termux)
-├── README.md         ← This file
-└── LICENSE           ← MIT License
-```
-
-Data stored at runtime:
-```
-~/.ai-detect/
-├── config.json       ← API key & settings (chmod 600)
-└── history.json      ← Scan history (up to 500 entries)
-```
-
----
-
-## 🆓 Gemini Free Tier
-
-| Metric | Limit |
-|--------|-------|
-| Requests per day | **1,500** |
-| Requests per minute | 15 |
-| Tokens per minute | 1,000,000 |
-| Cost | **$0.00** |
-
-Get your free key: [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-```bash
-# 1. Fork the repo
-# 2. Create a branch
-git checkout -b feature/new-scanner
-
-# 3. Make changes
-# 4. Test
-python3 -m py_compile ai_detect.py
-bash -n install.sh
-
-# 5. Commit
-git commit -m "feat: add new scanner type"
-
-# 6. Push & PR
-git push origin feature/new-scanner
-```
-
-**Ideas for contribution:**
-- New scanner types (PDF, Office docs, QR codes)
-- Additional AI models support
-- Output formats (JSON, CSV export)
-- More banner styles
-- Windows compatibility
-
----
-
-## 🔒 Security & Privacy
-
-- API key is **never logged** or transmitted except to Google Gemini
-- API key input is **hidden** (uses `getpass`)
-- Config file has **restricted permissions** (`chmod 600`)
-- **Tor routing** hides your IP from Google's servers
-- Scan content is sent to Google Gemini — do not scan **highly confidential** data
-
----
-
-## ❓ Troubleshooting
-
-**`ai-detect: command not found`**
-```bash
-source ~/.bashrc    # Termux
-# or
-export PATH="$PATH:/usr/local/bin"
-```
-
-**`Invalid API key (HTTP 400)`**
-```bash
-# Get a fresh key from:
-# https://aistudio.google.com/app/apikey
-# Then: ai-detect → [9] Settings → [1] Change API Key
-```
-
-**`Tor failed to start`**
-```bash
-# Check Tor is installed
-which tor
-
-# Start manually
-sudo systemctl start tor    # Linux
-tor &                        # Termux
-
-# Or disable Tor
-ai-detect --no-tor
-```
-
-**`Rate limit (HTTP 429)`**
-```bash
-# Wait 60 seconds between scans
-# Gemini free tier: 15 requests/minute
-```
-
----
-
-## 📄 License
-
-```
-MIT License — Copyright (c) 2026 PhishGuard AI
-```
-
-See [LICENSE](LICENSE) for full text.
-
----
-
-<div align="center">
-
-**Made with ❤️ | Powered by Google Gemini | Built for Security**
-
-[⭐ Star this repo](https://github.com/YOUR-USERNAME/phishguard-ai) · [🐛 Report Bug](https://github.com/YOUR-USERNAME/phishguard-ai/issues) · [💡 Request Feature](https://github.com/YOUR-USERNAME/phishguard-ai/issues)
-
-</div>
+MIT — see [LICENSE](LICENSE).
