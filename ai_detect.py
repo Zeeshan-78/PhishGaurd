@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PhishGuard AI (ai-detect) v3.2.0
+PhishGuard AI (ai-detect) v3.2.1
 Phishing, malware and website-vulnerability scanner for Linux and Termux.
 
   * Paste an API key and the provider and model are detected automatically
